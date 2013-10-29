@@ -1,0 +1,6 @@
+Copyright (c) 2013, Christian DeLozier.  All rights reserved.
+
+The techniques used by this project are based on the paper "Ironclad C++: A 
+Library-Augmented Type-Safe Subset of C++." by Christian DeLozier, 
+Richard Eisenberg, Peter-Michael Osera, Santosh Nagarakatte, Milo M. K. Martin,
+and Steve Zdancewic.

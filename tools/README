@@ -1,0 +1,8 @@
+NOTE: These directories are empty for now.  I'm currently working to have the validator 
+run without the need to install the LLVM project framework.  Once this is finished, 
+I will add the validator and refactoring tool to the listed directories.
+
+This directory contains the plugins for the static validator and automated refactoring 
+tool that are used with Ironclad C++.  Both are powered by clang and can be used 
+with the following command line options:
+

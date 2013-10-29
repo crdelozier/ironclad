@@ -1,0 +1,35 @@
+---------------------------------------
+Rules for valid Ironclad C++ code
+----------------------------------------
+
+This document outlines the rules for code to be considered as 
+valid by the Ironclad C++ static validation tool.
+
+----------------------------------------
+1.  Pointers
+----------------------------------------
+
+* No bare pointers may be declared in user code including in:
+    - Variables
+    - Class members
+    - Function parameters
+    - Typedefs
+
+  e.g. int * p; must be replaced with ptr<int> p;
+
+* All calls to "new" must be replaced by calls to "new_obj" or "new_array"
+
+* All calls to "delete" must be replaced by the member function "ptr.destroy()"
+
+* All pointer casts must use "safe::cast" instead of "dynamic_cast", "static_cast", 
+  "reinterpret_cast", or C-style casts
+
+* All classes used in a cast statement must be virtual to allow "dynamic_cast"
+
+----------------------------------------
+2.  Arrays
+----------------------------------------
+
+* No bare arrays may be declared in user code
+
+  e.g. int x[5]; must be replaced with safe::array<int> x(5);
