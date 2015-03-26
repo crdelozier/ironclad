@@ -9,6 +9,11 @@ find_package( Threads )
 # find_package(Boost REQUIRED COMPONENTS system)
 
 
+if(UNIX)
+    SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}  -std=c++0x")
+endif()
+
+
 ###########
 ## Build ##
 ###########
