@@ -1,2 +1,0 @@
-allocation.o:
-	g++ -std=c++0x -c allocation.cpp -Iinclude -fPIC -g
