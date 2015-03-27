@@ -1,0 +1,3 @@
+[submodule "packages/google-test"]
+            path = packages/google-test
+            url = https://github.com/voormedia/google-test.git
