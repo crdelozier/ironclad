@@ -1,0 +1,3 @@
+all:
+	gcc -c mpxrt-utils.c -O2 -I../include/ -pthread
+	gcc -c mpxrt.c -O2 -I../include/
