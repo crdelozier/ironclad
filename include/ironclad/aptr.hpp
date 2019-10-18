@@ -59,7 +59,8 @@ extern void ironclad_precise_mark(void* pointer, void** source);
 
 namespace safe{
 
-template <class T> class aptr
+// Template paramter int B is the bounds register to use (or 0 for none)
+template <class T, int B = 0> class aptr
 #ifdef _ENABLE_PRECISE_GC
 : public IroncladPreciseGC
 #endif
@@ -79,6 +80,291 @@ public:
   }
 
   aptr(std::nullptr_t) : data(NULL), index(0), size(0) {}
+
+  // Constructor used by new_array to create an aptr with a size bound
+  aptr(T * _data, long _size) : data(_data), index(0), size(_size) {
+  }
+
+  aptr(T * _data, long _size, long _index) : data(_data), index(_index), size(_size){
+  }
+
+  ~aptr() {}
+
+  aptr(aptr & other) : data(other.data), index(other.index), size(other.size) {
+  }
+
+  aptr(aptr const & other) : data(other.data), index(other.index), size(other.size) {
+  }
+
+  template <class U> aptr(aptr<U> & other) : data(const_cast<T*>(other.data)), 
+                                             index(other.index), 
+                                             size(other.size) {
+  }
+
+  template <class U> aptr(const aptr<U> & other) : data(const_cast<T*>(other.data)), 
+                                                   index(other.index), 
+                                                   size(other.size) {
+  }
+
+  typedef T * iterator;
+
+  T * begin(){
+    return data + index;
+  }
+
+  T * end(){
+    return data + size;
+  }
+
+  void mark() const 
+  {
+#ifdef _ENABLE_PRECISE_GC
+    if(data != nullptr){
+      ironclad_precise_mark((void*)data,(void**)&data);
+    }
+#endif
+  }
+
+  static aptr<T> pointer_to(T & element){
+    return aptr<T>(&element);
+  }
+
+  long getSize() const {
+    return size;
+  }
+
+  long getIndex() const {
+    return index;
+  }
+
+  /*
+   * The programmer must explicitly request that an aptr be created from an 
+   * laptr because the common case is that an laptr refers to a stack location 
+   * and will not be allowed to be stored in an aptr
+   */
+
+  void from_laptr(laptr<T> & other){
+    data = other.data;
+    index = other.index;
+    size = other.size;
+    STACK_CHECK
+  }
+
+  void from_laptr(laptr<T> const & other){
+    data = other.data;
+    index = other.index;
+    size = other.size;
+    STACK_CHECK
+  }
+
+  inline T* operator-> () 
+    __attribute__((always_inline))
+  {
+    ARRAY_NULL_CHECK
+    BOUNDS_CHECK
+    return data + index;
+  }
+
+  inline T& operator* () 
+    __attribute__((always_inline))
+  {
+    ARRAY_NULL_CHECK
+    BOUNDS_CHECK
+    return *(data + index);
+  }
+
+  inline T* operator-> () const 
+    __attribute__((always_inline))
+  {
+    ARRAY_NULL_CHECK
+    BOUNDS_CHECK
+    return data + index;
+  }
+
+  inline T& operator* () const 
+    __attribute__((always_inline))
+  {
+    ARRAY_NULL_CHECK
+    BOUNDS_CHECK
+    return *(data + index);
+  }
+
+  inline aptr<T>& operator++() {
+    ++index;
+    return *this;
+  }
+  
+  inline aptr<T>& operator--() {
+    --index;
+    return *this;
+  }
+
+  inline aptr<T> operator++(int) {
+    aptr<T> ret(*this);
+    index++;
+    return ret;
+  }
+
+  inline aptr<T> operator--(int) {
+    aptr<T> ret(*this);
+    index--;
+    return ret;
+  }
+
+  inline aptr<T> & operator+= (int op) {
+    index += op;
+    return *this;
+  }
+
+  inline aptr<T>& operator-= (int op) {
+    index -= op;
+    return *this;
+  }
+
+  inline std::ptrdiff_t operator- (aptr<T> & other) const {
+    return (this->data + this->index) - (other.data + other.index);
+  }
+
+  inline std::ptrdiff_t operator- (const aptr<T> & other) const {
+    return (this->data + this->index) - (other.data + other.index);
+  }
+
+  inline aptr<T> operator- (size_t diff) const {
+    aptr<T> new_ptr(data,size);
+    new_ptr.index = index - diff;
+    return new_ptr;
+  }
+
+  inline aptr<T> operator+ (size_t diff) const {
+    aptr<T> new_ptr(data,size);
+    new_ptr.index = index + diff;
+    return new_ptr;
+  }
+
+  inline aptr<T>& operator= (const aptr<T>& other) {
+    data = other.data;
+    size = other.size;
+    index = other.index;
+    return *this;
+  }
+
+  inline T& operator[] (const int _index) const 
+    __attribute__((always_inline)) 
+  {
+    BOUNDS_CHECK_INDEX(_index)
+    return data[index + _index];
+  }
+
+  inline void free() const {
+#ifndef _HAVE_BDW_GC
+    std::free(static_cast<void*>(data));
+#endif
+    data = NULL;
+  }
+
+  /*
+   * These functions should only be used for compatability with non-Ironclad code!
+   */
+
+  inline T * convert_to_raw() const {
+    return const_cast<T*>(data + index);
+  }
+
+  inline T * getData() const {
+    return data;
+  }
+
+  inline void * convert_to_void() const {
+    return (void*)(data + index);
+  }
+
+  inline unsigned long convert_to_long() const {
+    return reinterpret_cast<unsigned long>(data + index);
+  }
+
+  /*
+   * Applies a spatial safety check for functions, such as memcpy
+   */
+
+  inline bool spatialCheck(size_t numBytes) const {
+    return (index + (long)(numBytes / sizeof(T)) >= 0 && index + (numBytes / sizeof(T)) <= size);
+  }
+
+  typedef T * aptr::*unspecified_bool_type;
+  
+  inline operator unspecified_bool_type() const {
+    return data == 0 ? 0 : &aptr::data;
+  }
+
+  inline bool operator! () const {
+      return data == NULL;
+  }
+
+  inline aptr<T> offset(unsigned int _index) const {
+    aptr<T> newPtr(data,size);
+    newPtr.index = index + _index;
+    return newPtr;
+  }
+
+  inline operator ptr<T>() const {
+    // Need to ensure that the index is currently in bounds to allow 
+    // conversion to a singleton pointer
+    if(data != NULL){
+      BOUNDS_CHECK
+    }
+    ptr<T> newPtr(data + index);
+    return newPtr;
+  }
+
+  inline operator laptr<T>() const {
+    laptr<T> newPtr(data,size,index);
+    newPtr.tb |= 1;
+    return newPtr;
+  }
+
+  template<typename S> friend bool operator== (const aptr<S>& aptr1,const aptr<S>& aptr2);
+  template<typename S> friend bool operator!= (const aptr<S>& aptr1,const aptr<S>& aptr2);
+
+  template<typename S> friend bool operator== (const aptr<S>& aptr1,const aptr<const S>& aptr2);
+  template<typename S> friend bool operator!= (const aptr<S>& aptr1,const aptr<const S>& aptr2);
+
+  template<typename S> friend bool operator== (const aptr<const S>& aptr1,const aptr<S>& aptr2);
+  template<typename S> friend bool operator!= (const aptr<const S>& aptr1,const aptr<S>& aptr2);
+
+  template<typename S> friend bool operator== (const aptr<S>& aptr1, const S * aptr2);
+  template<typename S> friend bool operator== (const S * aptr1, const aptr<S>& aptr2);
+
+  template<typename S> friend bool operator!= (const aptr<S>& aptr1, const S * aptr2);
+  template<typename S> friend bool operator!= (const S * aptr1, const aptr<S>& aptr2);
+
+  template<typename S> friend bool operator> (const aptr<S>& aptr1, const aptr<S>& aptr2);
+  template<typename S> friend bool operator>= (const aptr<S>& aptr1, const aptr<S>& aptr2);
+  template<typename S> friend bool operator< (const aptr<S>& aptr1,const aptr<S>& aptr2);
+  template<typename S> friend bool operator<= (const aptr<S>& aptr1,const aptr<S>& aptr2);
+};
+
+// Template paramter int B is the bounds register to use (or 0 for none)
+template <class T, 1> class aptr
+#ifdef _ENABLE_PRECISE_GC
+: public IroncladPreciseGC
+#endif
+{
+  // data is mutable to allow destroy() (which is
+  // a const method) to set data to null
+  mutable T * data;
+
+public:
+  template<typename> friend class aptr;
+  template<typename,size_t> friend class array;
+  template<typename S> friend aptr<S> new_array(size_t _size);
+
+  aptr() : data(NULL) {
+    // TODO: Put null bounds in BND0
+  }
+
+  aptr(std::nullptr_t) : data(NULL) {
+    // TODO: Put null bounds in BND0
+  }
 
   // Constructor used by new_array to create an aptr with a size bound
   aptr(T * _data, long _size) : data(_data), index(0), size(_size) {

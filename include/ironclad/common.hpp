@@ -53,3 +53,5 @@
 #define BOUNDS_CHECK_INDEX(idx) assert(index + idx >= 0 && index + idx < size);
 
 #define STACK_CHECK assert(other.notOnStack());
+
+#define NULL_BOUNDS(N) 
