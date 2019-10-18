@@ -68,7 +68,7 @@ template <class T> class laptr{
 public:
 
   template<typename> friend class laptr;
-  template<typename> friend class aptr;
+  template<typename,int> friend class aptr;
   template<typename,size_t> friend class array;
   
   laptr() : data(NULL), index(0), size(0) {

@@ -108,6 +108,38 @@ public:
     aptr<T> ret(new(buffer) T[size],size);
     return ret;
   }
+
+  static aptr<T,1>
+  new_array_1(size_t size)
+  {
+    T * buffer = (T*)IC_MALLOC(size * sizeof(T));
+    aptr<T,1> ret(new(buffer) T[size],size);
+    return ret;
+  }
+
+  static aptr<T,2>
+  new_array_2(size_t size)
+  {
+    T * buffer = (T*)IC_MALLOC(size * sizeof(T));
+    aptr<T,2> ret(new(buffer) T[size],size);
+    return ret;
+  }
+
+  static aptr<T,3>
+  new_array_3(size_t size)
+  {
+    T * buffer = (T*)IC_MALLOC(size * sizeof(T));
+    aptr<T,3> ret(new(buffer) T[size],size);
+    return ret;
+  }
+
+  static aptr<T,4>
+  new_array_4(size_t size)
+  {
+    T * buffer = (T*)IC_MALLOC(size * sizeof(T));
+    aptr<T,4> ret(new(buffer) T[size],size);
+    return ret;
+  }
 };
 
 #ifdef _ENABLE_PRECISE_GC
@@ -139,6 +171,20 @@ public:
     aptr<T> ret(new(objbuffer) T[size],size);
     return ret;
   }
+
+  static aptr<T,1>
+  new_array_1(size_t size)
+  {
+    char * buffer = 
+      (char*)PIC_MALLOC((size * sizeof(T)) + 
+                       sizeof(tagged_array_allocation<T>));
+    char * objbuffer = buffer + sizeof(tagged_array_allocation<T>);
+
+    new(buffer) tagged_array_allocation<T>(size,(T*)objbuffer);
+
+    aptr<T,1> ret(new(objbuffer) T[size],size);
+    return ret;
+  }
 }; 
 #endif // _ENABLE_PRECISE_GC
 
@@ -154,6 +200,34 @@ aptr<T>
 new_array(size_t size)
 {
   return allocator<IsDerivedFrom<T,IroncladPreciseGC>::Is,T>::new_array(size);
+}
+
+template<class T>
+aptr<T,1>
+new_array_1(size_t size)
+{
+  return allocator<IsDerivedFrom<T,IroncladPreciseGC>::Is,T>::new_array_1(size);
+}
+
+template<class T>
+aptr<T,2>
+new_array_2(size_t size)
+{
+  return allocator<IsDerivedFrom<T,IroncladPreciseGC>::Is,T>::new_array_2(size);
+}
+  
+template<class T>
+aptr<T,3>
+new_array_3(size_t size)
+{
+  return allocator<IsDerivedFrom<T,IroncladPreciseGC>::Is,T>::new_array_3(size);
+}
+
+template<class T>
+aptr<T,4>
+new_array_4(size_t size)
+{
+  return allocator<IsDerivedFrom<T,IroncladPreciseGC>::Is,T>::new_array_4(size);
 }
 
 template<class T> 
@@ -214,6 +288,66 @@ new_array_impl(size_t size)
   new(buffer) tagged_array_allocation<T>(size,(T*)objbuffer);
 
   aptr<T> ret(new(objbuffer) T[size],size);
+  return ret;
+}
+
+template<class T> 
+aptr<T,1> 
+new_array_impl_1(size_t size)
+{
+  char * buffer = 
+    (char*)IC_MALLOC((size * sizeof(T)) + 
+    sizeof(tagged_array_allocation<T>));
+  char * objbuffer = buffer + sizeof(tagged_array_allocation<T>);
+
+  new(buffer) tagged_array_allocation<T>(size,(T*)objbuffer);
+
+  aptr<T,1> ret(new(objbuffer) T[size],size);
+  return ret;
+}
+
+template<class T> 
+aptr<T,2> 
+new_array_impl_2(size_t size)
+{
+  char * buffer = 
+    (char*)IC_MALLOC((size * sizeof(T)) + 
+    sizeof(tagged_array_allocation<T>));
+  char * objbuffer = buffer + sizeof(tagged_array_allocation<T>);
+
+  new(buffer) tagged_array_allocation<T>(size,(T*)objbuffer);
+
+  aptr<T,2> ret(new(objbuffer) T[size],size);
+  return ret;
+}
+
+template<class T> 
+aptr<T,3> 
+new_array_impl_3(size_t size)
+{
+  char * buffer = 
+    (char*)IC_MALLOC((size * sizeof(T)) + 
+    sizeof(tagged_array_allocation<T>));
+  char * objbuffer = buffer + sizeof(tagged_array_allocation<T>);
+
+  new(buffer) tagged_array_allocation<T>(size,(T*)objbuffer);
+
+  aptr<T,3> ret(new(objbuffer) T[size],size);
+  return ret;
+}
+
+template<class T> 
+aptr<T,4> 
+new_array_impl_4(size_t size)
+{
+  char * buffer = 
+    (char*)IC_MALLOC((size * sizeof(T)) + 
+    sizeof(tagged_array_allocation<T>));
+  char * objbuffer = buffer + sizeof(tagged_array_allocation<T>);
+
+  new(buffer) tagged_array_allocation<T>(size,(T*)objbuffer);
+
+  aptr<T,4> ret(new(objbuffer) T[size],size);
   return ret;
 }
 
@@ -366,6 +500,12 @@ template <class T> static int safe_pthread_create(ptr<pthread_t> thread, ptr<con
   runner->arg = arg;
   return pthread_create(thread.convert_to_raw(), attr.convert_to_raw(), wrapper<T>, (void*)runner);
 }
+
+/*
+void safe_pthread_barrier_wait(ptr<pthread_barrier_t> barrier){
+  pthread_barrier_wait(barrier.convert_to_raw());
+}
+*/
 #endif
 
 static int safe_atoi( aptr<char> str ){

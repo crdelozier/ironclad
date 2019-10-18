@@ -69,7 +69,7 @@ template <class T> class ptr
 
 public:
   template<typename> friend class ptr;
-  template<typename> friend class aptr;
+  template<typename,int> friend class aptr;
   template<typename> friend class lptr;
   template<typename S, typename... TArgs> friend ptr<S> new_ptr(TArgs... args);
 
