@@ -4,14 +4,16 @@
 
 using namespace safe;
 
-extern void enable_mpx();
-
 int main(int argc, char **argv){
-  enable_mpx();
   int N = atoi(argv[1]);
+  /*
   aptr<int,1> A = new_array_1<int>(N);
   aptr<int,2> B = new_array_2<int>(N);
   aptr<int,3> C = new_array_3<int>(N);
+  */
+  aptr<int> A = new_array<int>(N);
+  aptr<int> B = new_array<int>(N);
+  aptr<int> C = new_array<int>(N);
 
   int sum = 0;
   

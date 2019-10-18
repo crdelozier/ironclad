@@ -50,6 +50,13 @@ public:
 
   // Constructor used by new_array to create an aptr with a size bound
   aptr(T * _data, long _size) : data(_data) {
+    asm volatile("movq %0, %%rax"
+		 : "=r" (_data)
+		 :: "rax");
+    asm volatile("movq %0, %%rdx"
+		 : "=r" (_size)
+		 :: "rdx");
+    asm volatile("bndmk (%rax,%rdx), %bnd0");
   }
 
   ~aptr() {}
@@ -57,7 +64,12 @@ public:
   inline T& operator[] (const int _index) const 
     __attribute__((always_inline)) 
   {
-    // TODO: Fix check to use bnd registers
+    T *addr = data + _index;
+    asm volatile("movq %0, %%rax"
+		 : "=r" (addr)
+		 :: "rax");
+    asm volatile("bndcl %rax, %bnd0");
+    asm volatile("bndcu %rax, %bnd0");
     return data[_index];
   }
 };
@@ -78,6 +90,13 @@ public:
 
   // Constructor used by new_array to create an aptr with a size bound
   aptr(T * _data, long _size) : data(_data) {
+    asm volatile("movq %0, %%rax"
+		 : "=r" (_data)
+		 :: "rax");
+    asm volatile("movq %0, %%rdx"
+		 : "=r" (_size)
+		 :: "rdx");
+    asm volatile("bndmk (%rax,%rdx), %bnd1");
   }
 
   ~aptr() {}
@@ -85,7 +104,12 @@ public:
   inline T& operator[] (const int _index) const 
     __attribute__((always_inline)) 
   {
-    // TODO: Fix check to use bnd registers
+    T *addr = data + _index;
+    asm volatile("movq %0, %%rax"
+		 : "=r" (addr)
+		 :: "rax");
+    asm volatile("bndcl %rax, %bnd1");
+    asm volatile("bndcu %rax, %bnd1");
     return data[_index];
   }
 };
@@ -106,6 +130,13 @@ public:
 
   // Constructor used by new_array to create an aptr with a size bound
   aptr(T * _data, long _size) : data(_data) {
+    asm volatile("movq %0, %%rax"
+		 : "=r" (_data)
+		 :: "rax");
+    asm volatile("movq %0, %%rdx"
+		 : "=r" (_size)
+		 :: "rdx");
+    asm volatile("bndmk (%rax,%rdx), %bnd2");
   }
 
   ~aptr() {}
@@ -113,7 +144,12 @@ public:
   inline T& operator[] (const int _index) const 
     __attribute__((always_inline)) 
   {
-    // TODO: Fix check to use bnd registers
+    T *addr = data + _index;
+    asm volatile("movq %0, %%rax"
+		 : "=r" (addr)
+		 :: "rax");
+    asm volatile("bndcl %rax, %bnd2");
+    asm volatile("bndcu %rax, %bnd2");
     return data[_index];
   }
 };
