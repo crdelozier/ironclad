@@ -57,7 +57,7 @@
 extern void ironclad_precise_mark(void* pointer, void** source);
 #endif
 
-namespace safe{
+namespace ironclad{
 
 template <class T> class ptr
 #ifdef _ENABLE_PRECISE_GC

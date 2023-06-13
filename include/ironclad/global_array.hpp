@@ -47,7 +47,7 @@
 
 #include "safe_mem.hpp"
 
-namespace safe{
+namespace ironclad {
 
 template<class T> class global_array_initializer{
 public:

@@ -41,7 +41,7 @@
 #include <cstring>
 #include <utility>
 
-namespace safe{
+namespace ironclad {
 
 template <typename T>
 struct has_zero {

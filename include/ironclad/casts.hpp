@@ -45,7 +45,7 @@
 #include "lptr.hpp"
 #include "laptr.hpp"
 
-namespace safe{
+namespace ironclad{
 
 namespace internal{
   template <class U, class T>

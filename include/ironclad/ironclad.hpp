@@ -37,4 +37,5 @@
 #include <ironclad/lptr.hpp>
 #include <ironclad/util.hpp>
 #include <ironclad/safe_string.hpp>
+#include <ironclad/safe_io.hpp>
 #include <ironclad/casts.hpp>

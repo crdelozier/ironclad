@@ -48,7 +48,7 @@
 #include <cassert>
 #include <cstdlib>
 
-namespace safe{
+namespace ironclad {
 
 template <class T> class varray{
 public:

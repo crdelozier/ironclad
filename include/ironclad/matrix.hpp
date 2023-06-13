@@ -44,7 +44,7 @@
 
 #include <cassert>
 
-namespace safe{
+namespace ironclad{
 
 template <class T> class matrix{
 public:

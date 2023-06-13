@@ -47,7 +47,7 @@
 
 #include "safe_mem.hpp"
 
-namespace safe{
+namespace ironclad {
 
 template<class T> class array_initializer{
 public:
@@ -87,7 +87,7 @@ public:
 
   void zero(){
     // TODO: Add getLaptr method to avoid offset(0) hack
-    safe::zero<T>(offset(0),ARRAY_N);
+    ironclad::zero<T>(offset(0),ARRAY_N);
   }
 
   array(std::initializer_list<T> static_init) : data() {

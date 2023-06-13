@@ -57,7 +57,7 @@
 extern void ironclad_precise_mark(void* pointer, void** source);
 #endif
 
-namespace safe{
+namespace ironclad{
 
 template <class T> class aptr
 #ifdef _ENABLE_PRECISE_GC
@@ -397,5 +397,5 @@ template<class T> inline bool operator> (const aptr<T>& aptr1,const aptr<T>& apt
 template<class T> inline bool operator>= (const aptr<T>& aptr1,const aptr<T>& aptr2){
   return (aptr1.data + aptr1.index) >= (aptr2.data + aptr2.index);
 }
-
+  
 }

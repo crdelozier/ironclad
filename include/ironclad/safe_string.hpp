@@ -41,9 +41,9 @@
 #include "aptr.hpp"
 #include <cstring>
 
-namespace safe{
+namespace ironclad {
 
-#define WRAP_LITERAL(x) safe::aptr<const char>(x,safe::str_literal_size(x))
+#define WRAP_LITERAL(x) ironclad::aptr<const char>(x,ironclad::str_literal_size(x))
 
 #ifdef _HAVE_IRONCLAD_STL
 #define LITERAL(x) WRAP_LITERAL(x)
@@ -51,7 +51,7 @@ namespace safe{
 #define LITERAL(x) x
 #endif
 
-#define PRINT(x) safe::safe_printf(LITERAL(x))
+#define PRINT(x) ironclad::safe_printf(LITERAL(x))
 
 static size_t str_literal_size(const char * str){
   return strlen(str) + 1;

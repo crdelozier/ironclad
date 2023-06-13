@@ -76,7 +76,7 @@
 #include <sys/mman.h>
 #include <sys/stat.h>
 
-namespace safe{
+namespace ironclad {
 
 #ifdef _HAVE_BDW_GC
 #ifdef _ENABLE_PRECISE_GC
@@ -368,6 +368,10 @@ template <class T> static int safe_pthread_create(ptr<pthread_t> thread, ptr<con
 }
 #endif
 
+static aptr<const char> cstring(const char *p){
+  return aptr<const char>(p,strlen(p));
+}
+
 static int safe_atoi( aptr<char> str ){
   return atoi(str.convert_to_raw());
 }
@@ -409,7 +413,7 @@ static int safe_fscanf( FILE * stream, const char * format, ... ){
   return total;
 }
 
-static int safe_fscanf( safe::ptr<FILE> stream, const char * format, ... ){
+static int safe_fscanf( ironclad::ptr<FILE> stream, const char * format, ... ){
   int total = 0;
   va_list arglist;
   va_start( arglist, format );
@@ -418,7 +422,7 @@ static int safe_fscanf( safe::ptr<FILE> stream, const char * format, ... ){
   return total;
 }
 
-static int safe_fscanf( safe::ptr<FILE> stream, safe::ptr<const char> format, ... ){
+static int safe_fscanf( ironclad::ptr<FILE> stream, ironclad::ptr<const char> format, ... ){
   int total = 0;
   va_list arglist;
   va_start( arglist, format );
@@ -430,9 +434,9 @@ static int safe_fscanf( safe::ptr<FILE> stream, safe::ptr<const char> format, ..
 // Specific case of fscanf that otherwise doesn't work
 
 #ifndef SAFE_NO_LOCAL
-static int safe_fscanf( safe::ptr<FILE> stream, const char * format, safe::laptr<char> str ){
+static int safe_fscanf( ironclad::ptr<FILE> stream, const char * format, ironclad::laptr<char> str ){
 #else
-static int safe_fscanf( safe::ptr<FILE> stream, const char * format, safe::aptr<char> str ){
+static int safe_fscanf( ironclad::ptr<FILE> stream, const char * format, ironclad::aptr<char> str ){
 #endif
   return fscanf(stream.convert_to_raw(),format,str.convert_to_raw());
 } 

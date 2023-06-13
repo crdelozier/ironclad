@@ -38,9 +38,33 @@
 
 #include <cstdio>
 
-namespace safe{
+namespace ironclad {
 
-static safe::ptr<FILE> safe_fopen( safe::aptr<const char> filename, safe::aptr<const char> mode){
+static ironclad::ptr<FILE> safe_fopen( ironclad::aptr<const char> filename, ironclad::aptr<const char> mode){
+  char * fname = (char*)filename.convert_to_raw();
+  NULL_TERM_CHECK(filename);
+  char * mde = (char*)mode.convert_to_raw();
+  NULL_TERM_CHECK(mode);
+  return ptr<FILE>(fopen(filename.convert_to_raw(),mode.convert_to_raw()));
+}
+  
+static ironclad::ptr<FILE> safe_fopen( ironclad::aptr<char> filename, const char * mde){
+  char * fname = (char*)filename.convert_to_raw();
+  ironclad::aptr<const char> mode(mde,sizeof(mde));
+  NULL_TERM_CHECK(filename);
+  NULL_TERM_CHECK(mode);
+  return ptr<FILE>(fopen(filename.convert_to_raw(),mode.convert_to_raw()));
+}
+
+static ironclad::ptr<FILE> safe_fopen( ironclad::aptr<const char> filename, const char * mde){
+  char * fname = (char*)filename.convert_to_raw();
+  ironclad::aptr<const char> mode(mde,sizeof(mde));
+  NULL_TERM_CHECK(filename);
+  NULL_TERM_CHECK(mode);
+  return ptr<FILE>(fopen(filename.convert_to_raw(),mode.convert_to_raw()));
+}
+
+static ironclad::ptr<FILE> safe_fopen( ironclad::laptr<const char> filename, ironclad::aptr<const char> mode){
   char * fname = (char*)filename.convert_to_raw();
   NULL_TERM_CHECK(filename);
   char * mde = (char*)mode.convert_to_raw();
@@ -48,45 +72,37 @@ static safe::ptr<FILE> safe_fopen( safe::aptr<const char> filename, safe::aptr<c
   return ptr<FILE>(fopen(filename.convert_to_raw(),mode.convert_to_raw()));
 }
 
-static safe::ptr<FILE> safe_fopen( safe::laptr<const char> filename, safe::aptr<const char> mode){
-  char * fname = (char*)filename.convert_to_raw();
-  NULL_TERM_CHECK(filename);
-  char * mde = (char*)mode.convert_to_raw();
-  NULL_TERM_CHECK(mode);
-  return ptr<FILE>(fopen(filename.convert_to_raw(),mode.convert_to_raw()));
-}
-
-static int safe_fgetc( safe::ptr<FILE> stream ){
+static int safe_fgetc( ironclad::ptr<FILE> stream ){
   return fgetc(stream.convert_to_raw());
 }
 
 template <class T> 
-static size_t safe_fread(safe::aptr<T> ptr, size_t size, 
-			 size_t count, safe::ptr<FILE> stream){
+static size_t safe_fread(ironclad::aptr<T> ptr, size_t size, 
+			 size_t count, ironclad::ptr<FILE> stream){
   assert(size == sizeof(T));
   assert(ptr.spatialCheck(count));
   return fread(ptr.convert_to_void(),size,count,stream.convert_to_raw());
 }
 
 template <class T> 
-static size_t safe_fread(safe::laptr<T> ptr, size_t size, 
-			 size_t count, safe::ptr<FILE> stream){
+static size_t safe_fread(ironclad::laptr<T> ptr, size_t size, 
+			 size_t count, ironclad::ptr<FILE> stream){
   assert(size == sizeof(T));
   assert(ptr.spatialCheck(count));
   return fread(ptr.convert_to_void(),size,count,stream.convert_to_raw());
 }
 
 template <class T> 
-static size_t safe_fwrite(safe::aptr<T> ptr, size_t size, 
-			  size_t count, safe::ptr<FILE> stream){
+static size_t safe_fwrite(ironclad::aptr<T> ptr, size_t size, 
+			  size_t count, ironclad::ptr<FILE> stream){
   assert(size == sizeof(T));
   assert(ptr.spatialCheck(count));
   return fwrite(ptr.convert_to_void(), sizeof(T), count, stream.convert_to_raw());
 }
 
 template <class T> 
-static size_t safe_fwrite(safe::laptr<T> ptr, size_t size, 
-			  size_t count, safe::ptr<FILE> stream){
+static size_t safe_fwrite(ironclad::laptr<T> ptr, size_t size, 
+			  size_t count, ironclad::ptr<FILE> stream){
   assert(size == sizeof(T));
   assert(ptr.spatialCheck(count));
   return fwrite(ptr.convert_to_void(), sizeof(T), count, stream.convert_to_raw());
@@ -135,7 +151,7 @@ static int safe_feof( ptr<FILE> stream ){
 
 namespace internal{
 
-static bool check_format_args(safe::aptr<const char> format_wrapped){
+static bool check_format_args(ironclad::aptr<const char> format_wrapped){
   const char* format = format_wrapped.convert_to_raw();
   bool started = false;
 
@@ -148,10 +164,11 @@ static bool check_format_args(safe::aptr<const char> format_wrapped){
       continue;
     }
   }
+  return true;
 }
 
 template<typename T, typename... Args>
-static bool check_format_args(safe::aptr<const char> format_wrapped, 
+static bool check_format_args(ironclad::aptr<const char> format_wrapped, 
                               T& arg, Args... args)
 {
   const char* format = format_wrapped.convert_to_raw();
@@ -173,6 +190,7 @@ static bool check_format_args(safe::aptr<const char> format_wrapped,
       }
     }
   }
+  return true;
 }
 
 }
@@ -202,7 +220,7 @@ static int safe_printf( aptr<const char> format, Args... args){
 }
 
 template <typename... Args>
-static int safe_fscanf( safe::ptr<FILE> stream, safe::aptr<const char> format, Args... args ){
+static int safe_fscanf( ironclad::ptr<FILE> stream, ironclad::aptr<const char> format, Args... args ){
   int total_args = 0;
   for(int c = 0; c < safe_strlen(format); ++c){
     if(format[c] == '%'){
@@ -215,8 +233,8 @@ static int safe_fscanf( safe::ptr<FILE> stream, safe::aptr<const char> format, A
 
 // Specific case of fscanf that otherwise doesn't work
 
-static int safe_fscanf( safe::ptr<FILE> stream, 
-			const char * format, safe::aptr<char> str ){
+static int safe_fscanf( ironclad::ptr<FILE> stream, 
+			const char * format, ironclad::aptr<char> str ){
   return fscanf(stream.convert_to_raw(),format,str.convert_to_raw());
 }
 
