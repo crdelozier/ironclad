@@ -1,16 +1,19 @@
+#include "clang/AST/ASTConsumer.h"
+#include "clang/AST/RecursiveASTVisitor.h"
+#include "clang/Frontend/CompilerInstance.h"
+#include "clang/Frontend/FrontendAction.h"
+#include "clang/Tooling/Tooling.h"
+#include "clang/Rewrite/Core/Rewriter.h"
+
+#include <sstream>
+
 // Declares clang::SyntaxOnlyAction.
 #include "clang/Frontend/FrontendActions.h"
 #include "clang/Tooling/CommonOptionsParser.h"
 #include "clang/Tooling/Tooling.h"
 // Declares llvm::cl::extrahelp.
 #include "llvm/Support/CommandLine.h"
-#include "clang/ASTMatchers/ASTMatchers.h"
-#include "clang/ASTMatchers/ASTMatchFinder.h"
 
-#include <set>
-
-using namespace clang;
-using namespace clang::ast_matchers;
 using namespace clang::tooling;
 using namespace llvm;
 
@@ -26,123 +29,117 @@ static cl::extrahelp CommonHelp(CommonOptionsParser::HelpMessage);
 // A help message for this specific tool can be added afterwards.
 static cl::extrahelp MoreHelp("\nMore help text...\n");
 
-#define ANY_POINTER_OPERAND anyOf(declRefExpr(to(valueDecl(hasType(isAnyPointer())).bind("pointer"))),implicitCastExpr(hasSourceExpression(declRefExpr(to(valueDecl(hasType(isAnyPointer())).bind("pointer"))))))
+using namespace clang;
 
-DeclarationMatcher PointerDeclMatcher =
-  valueDecl(
-	    hasType(isAnyPointer())
-	    ).bind("pointerValue");
-
-StatementMatcher ArraySubscriptMatcher =
-  arraySubscriptExpr(hasBase(ANY_POINTER_OPERAND)).bind("subscriptExpr");
-
-StatementMatcher PointerArithmeticMatcher =
-  anyOf(
-    binaryOperator(
-      allOf(
-        hasLHS(ANY_POINTER_OPERAND),
-        hasRHS(binaryOperator(allOf(
-          hasAnyOperatorName("+","-","*","/","<<",">>"),
-	  hasEitherOperand(ANY_POINTER_OPERAND)))
-        )
-     )
-  ),
-    unaryOperator(
-      allOf(
-        hasAnyOperatorName("++","--"),
-        hasUnaryOperand(ANY_POINTER_OPERAND)
-      )
-    )
-);
-
-DeclarationMatcher PointerArrayInitMatcher =
-  varDecl(hasInitializer(cxxNewExpr(isArray()))).bind("pointer");
-
-StatementMatcher CallMatcher =
-  callExpr(
-	   forEachArgumentWithParam(
-				    ANY_POINTER_OPERAND,
-				    parmVarDecl(hasType(isAnyPointer())).bind("paramPointer")
-				    )
-	   );
-
-std::set<int64_t> arrayPointers;
-
-class ArraySubscriptIdentifier : public MatchFinder::MatchCallback {
-public :
-  virtual void run(const MatchFinder::MatchResult &Result) override {
-    ASTContext *Context = Result.Context;
-    const ValueDecl *AD = Result.Nodes.getNodeAs<ValueDecl>("pointer");
-    if(!AD || !Context->getSourceManager().isWrittenInMainFile(AD->getLocation()))
-      return;
-
-    arrayPointers.insert(AD->getID());
-    //llvm::outs() << "Found array subscript: " << AD->getNameAsString() << "\n";
-  } 
-};
-
-class PointerArithmeticIdentifier : public MatchFinder::MatchCallback {
-public :
-  virtual void run(const MatchFinder::MatchResult &Result) override {
-    ASTContext *Context = Result.Context;
-    const ValueDecl *AD = Result.Nodes.getNodeAs<ValueDecl>("pointer");
-    if(!AD || !Context->getSourceManager().isWrittenInMainFile(AD->getLocation()))
-      return;
-
-    arrayPointers.insert(AD->getID());
-    //llvm::outs() << "Found pointer arithmetic: " << AD->getNameAsString() << "\n";
-  } 
-};
-
-class PointerArrayInitIdentifier : public MatchFinder::MatchCallback {
-public :
-  virtual void run(const MatchFinder::MatchResult &Result) override {
-    ASTContext *Context = Result.Context;
-    const VarDecl *AD = Result.Nodes.getNodeAs<VarDecl>("pointer");
-    if(!AD || !Context->getSourceManager().isWrittenInMainFile(AD->getLocation()))
-      return;
-
-    arrayPointers.insert(AD->getID());
-    llvm::outs() << "Found array init: " << AD->getNameAsString() << "\n";
-  } 
-};
-
-class CallIdentifier : public MatchFinder::MatchCallback {
-public :
-  virtual void run(const MatchFinder::MatchResult &Result) override {
-    const ValueDecl *Arg = Result.Nodes.getNodeAs<ValueDecl>("pointer");
-    const ValueDecl *Param = Result.Nodes.getNodeAs<ValueDecl>("paramPointer");
-    if(!Arg || !Param)
-      return;
-
-    if(arrayPointers.count(Param->getID()) > 0){    
-      arrayPointers.insert(Arg->getID());
-    }
-    if(arrayPointers.count(Arg->getID()) > 0){
-      arrayPointers.insert(Param->getID());
-    }
-    //llvm::outs() << "Found pointer arithmetic: " << AD->getNameAsString() << "\n";
-  } 
-};
-
-class PointerRewriter : public MatchFinder::MatchCallback {
-public :
-  virtual void run(const MatchFinder::MatchResult &Result) override {
-    ASTContext *Context = Result.Context;
-    const ValueDecl *VD = Result.Nodes.getNodeAs<ValueDecl>("pointerValue");
-    // We do not want to convert header files!
-    if (!VD || !Context->getSourceManager().isWrittenInMainFile(VD->getLocation()))
-      return;
-
-    if(arrayPointers.count(VD->getID()) > 0){
-        llvm::outs() << "Found array pointer: " << VD->getQualifiedNameAsString() << "\n";  
+class IroncladHelper{
+public:
+  static std::string buildType(const QualType& qt){
+    std::stringstream ss;
+    if(qt->isPointerType()){
+      const PointerType *pt = dyn_cast<const PointerType>(qt.getTypePtr());
+      ss << "ironclad::aptr< " << buildType(pt->getPointeeType()) << " >";
+    }else if(qt->isDependentType()){
+      // Translate template parameters that are pointers
+      // TODO
     }else{
-        llvm::outs() << "Found singleton pointer: " << VD->getQualifiedNameAsString() << "\n";  
+      // Base type, return full qualified name
+      ss << qt.getAsString();
     }
+    return ss.str();
+  }
+
+  static std::string StmtToString(Stmt *S){
+    std::string str;
+    raw_string_ostream stream(str);
+    S->printPretty(stream, NULL, PrintingPolicy(LangOptions()));
+    stream.flush();
+    return str;
+  }
+
+  static std::string OptExprToString(Optional<Expr*> OE){
+    std::string str;
+    raw_string_ostream stream(str);
+    (*OE)->printPretty(stream, NULL, PrintingPolicy(LangOptions()));
+    stream.flush();
+    return str;
   }
 };
 
-int main(int argc, const char **argv) {
+class IroncladRefactorVisitor
+  : public RecursiveASTVisitor<IroncladRefactorVisitor> {
+public:
+  explicit IroncladRefactorVisitor(ASTContext *Context, Rewriter *Rewrite)
+    : Context(Context), Rewrite(Rewrite) {}
+
+  bool doRewrite(Decl *D){
+    return Context->getSourceManager().isWrittenInMainFile(D->getLocation());
+  }
+  
+  bool VisitVarDecl(VarDecl *Var) {
+    std::stringstream ss;
+
+    if(doRewrite(Var)){
+      if(Var->getType()->isPointerType()){
+	ss << IroncladHelper::buildType(Var->getType());
+	ss << " ";
+	ss << Var->getNameAsString();
+
+	if(Var->hasInit()){
+	  Expr *InitExpr = Var->getInit();
+	  if(isa<CXXNewExpr>(InitExpr)){
+	    CXXNewExpr *NewExpr = dyn_cast<CXXNewExpr>(InitExpr);
+	    if(NewExpr->isArray()){
+	      Optional<Expr*> ArraySize = NewExpr->getArraySize();
+	      if(ArraySize){
+		ss << " = ironclad::new_array< " << IroncladHelper::buildType(NewExpr->getAllocatedType())
+		   << " >(" << IroncladHelper::OptExprToString(ArraySize) << ")";
+	      }else{
+		llvm::errs() << "????NO ARRAY SIZE????\n";
+	      }
+	    }else{
+
+	    }
+	  }else{
+	    llvm::errs() << Var->getInit()->getStmtClassName() << "\n";
+	    //llvm::errs() << IroncladHelper::StmtToString(Var->getInit()) << "\n";
+	  }
+	}
+	
+	Rewrite->ReplaceText(Var->getSourceRange(),ss.str());
+      }
+    }
+    
+    return true;
+  }
+
+private:
+  ASTContext *Context;
+  Rewriter *Rewrite;
+};
+
+class IroncladRefactorConsumer : public clang::ASTConsumer {
+public:
+  explicit IroncladRefactorConsumer(ASTContext *Context)
+    : Rewrite(Context->getSourceManager(),Context->getLangOpts()), Visitor(Context,&Rewrite) {}
+
+  virtual void HandleTranslationUnit(clang::ASTContext &Context) override {
+    Visitor.TraverseDecl(Context.getTranslationUnitDecl());
+    Rewrite.overwriteChangedFiles();
+  }
+private:
+  Rewriter Rewrite;
+  IroncladRefactorVisitor Visitor;
+};
+
+class IroncladRefactorAction : public clang::ASTFrontendAction {
+public:
+  virtual std::unique_ptr<clang::ASTConsumer> CreateASTConsumer (
+								clang::CompilerInstance &Compiler, llvm::StringRef InFile) override {
+    return std::make_unique<IroncladRefactorConsumer>(&Compiler.getASTContext());
+  }
+};
+
+int main(int argc, const char **argv) {  
   auto ExpectedParser = CommonOptionsParser::create(argc, argv, MyToolCategory);
   if (!ExpectedParser) {
     // Fail gracefully for unsupported options.
@@ -151,31 +148,7 @@ int main(int argc, const char **argv) {
   }
   CommonOptionsParser& OptionsParser = ExpectedParser.get();
   ClangTool Tool(OptionsParser.getCompilations(),
-                 OptionsParser.getSourcePathList());
-
-  // First, identify array and singleton pointers
-  ArraySubscriptIdentifier SubID;
-  PointerArithmeticIdentifier ArithID;
-  PointerArrayInitIdentifier ArrayInitID;
-  MatchFinder IdentifyFinder;
-  IdentifyFinder.addMatcher(ArraySubscriptMatcher, &SubID);
-  IdentifyFinder.addMatcher(PointerArithmeticMatcher, &ArithID);
-  IdentifyFinder.addMatcher(PointerArrayInitMatcher, &ArrayInitID);
-  Tool.run(newFrontendActionFactory(&IdentifyFinder).get());
-
-  // Next, repeatedly check for pointers used as arguments to array parameters
-  size_t oldSize;
-  do{
-    oldSize = arrayPointers.size();
-    CallIdentifier CallID;
-    MatchFinder CallFinder;
-    CallFinder.addMatcher(CallMatcher, &CallID);
-    Tool.run(newFrontendActionFactory(&CallFinder).get());
-  }while(oldSize != arrayPointers.size());
+		 OptionsParser.getSourcePathList());
   
-  // Now, rewrite the pointer types and operations in this file
-  PointerRewriter Rewriter;
-  MatchFinder RewriteFinder;
-  RewriteFinder.addMatcher(PointerDeclMatcher, &Rewriter);
-  return Tool.run(newFrontendActionFactory(&RewriteFinder).get());
+  return Tool.run(newFrontendActionFactory<IroncladRefactorAction>().get());
 }
